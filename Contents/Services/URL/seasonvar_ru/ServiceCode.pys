@@ -1,0 +1,99 @@
+# coding=utf-8
+import urllib
+# NB: becase of the sandbox restrictions (can't access server via HTTP and can't access plugins Dict)
+# and i also don't want to duplicate large pieces of code because of this restrictions
+
+
+PLEX_SERVER = 'http://127.0.0.1:32400'
+PLUGIN_PREFIX = '/video/seasonvar_ru'
+FETCH_URI = '/cache/season_cache/'
+EPISODE_KEY = 'episode_id'
+SEASON_KEY = 'season_id'
+SHOW_NAME_KEY = 'show_name'
+TOKEN_KEY = 'token'
+TRANSLATE_KEY = 'translate'
+
+
+def ParseFakeUrl(url):
+    params = Regex(r'http://plex/seasonvar_ru/(.*?)$').search(url).group(1)
+    parsed_url = String.Decode(params).split('#')[1:]  # NB: data is binary. ref. to binascii.a2b_base64()
+    items = {}
+    for item in parsed_url:
+        k,v = item.split('=')
+        items[k] = v
+    return items
+
+
+def GetSeasonFromCache(url):
+    data = ParseFakeUrl(url)
+    url = '%s%s%s%s?show_name=%s&X-Plex-Token=%s' % (PLEX_SERVER, PLUGIN_PREFIX, FETCH_URI, data[SEASON_KEY],
+                                          data[SHOW_NAME_KEY], data[TOKEN_KEY])
+    season = JSON.ObjectFromString(urllib.urlopen(url).read())
+    return season
+
+
+def GetEpisodeItem(url):
+    url_data = ParseFakeUrl(url)
+    if EPISODE_KEY not in url_data:
+        return url
+    season = GetSeasonFromCache(url)
+    for episode in season['playlist'][url_data[TRANSLATE_KEY].decode('utf-8')]:
+        if episode['episode_id'] != url_data[EPISODE_KEY]:
+            continue
+        else:
+            return episode
+    return url
+
+
+def GetEpisodeLink(episode_item):
+    if isinstance(episode_item, dict):
+        return episode_item['link']
+    else:
+        return episode_item
+
+
+def MediaObjectsForURL(url):
+    # NB: notated for better readability
+    mo = [
+        MediaObject(
+            parts=[
+                PartObject(
+                    key=Callback(
+                        PlayEpisode,
+                        url=GetEpisodeLink(GetEpisodeItem(url))
+                        )
+                    )
+                ],
+            container=Container.MP4,
+            video_codec=VideoCodec.H264,
+            video_resolution='720',
+            audio_codec=AudioCodec.AAC,
+            audio_channels=2,
+            optimized_for_streaming=False
+            )
+        ]
+    return mo
+
+
+def MetadataObjectForURL(url):
+    season = GetSeasonFromCache(url)
+    episode = GetEpisodeItem(url)
+    # NB: notated for better readability
+    eo = EpisodeObject(
+        rating_key=url,
+        rating=season['rating'],
+        title=episode['name'],
+        season=int(season['season_number']),
+        index=int(episode['episode_id']),
+        show=season['name'],
+        summary=season['summary'],
+        thumb=season['thumb']
+        )
+    return eo
+
+
+@indirect
+def PlayEpisode(url, **kwargs):
+    if kwargs:
+        Log.Debug('>>> PlayEpisode **kwargs: %s <<<' % kwargs)
+    return IndirectResponse(VideoClipObject, key=url)

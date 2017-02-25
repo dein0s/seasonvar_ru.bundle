@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+        <key>CFBundleDevelopmentRegion</key>
+            <string>Russian</string>
+        <key>CFBundleIdentifier</key>
+            <string>com.plexapp.plugins.seasonvar_ru</string>
+        <key>CFBundleVersion</key>
+            <string>0.1</string>
+        <key>PlexFrameworkVersion</key>
+            <string>2</string>
+        <key>PlexClientPlatforms</key>
+            <string>*</string>
+        <key>PlexPluginRegions</key>
+            <array>
+                <string>RU</string>
+            </array>
+        <key>PlexPluginDebug</key>
+        <array>
+                <string>1</string>
+        </array>
+        <key>PlexPluginCodePolicy</key>
+            <string>Elevated</string>
+        <key>PlexServiceCodePolicy</key>
+            <string>Elevated</string>
+        <key>PlexPluginMode</key>
+            <string>AlwaysOn</string>
+        </dict>
+</plist>

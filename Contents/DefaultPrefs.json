@@ -1,0 +1,56 @@
+[
+  {
+      "id": "language",
+      "label": "Language",
+      "type": "enum",
+      "values": [
+          "English/en",
+          "Russian/ru"
+      ],
+      "default": "Russian/ru"
+  },
+    {
+        "id": "api_key",
+        "label": "Seasonvar API Key",
+        "option": "hidden",
+        "type": "text",
+        "default": ""
+    },
+    {
+        "id": "username",
+        "label": "Seasonvar Web Username",
+        "type": "text",
+        "default": ""
+    },
+    {
+        "id": "password",
+        "label": "Seasonvar Web Password",
+        "option": "hidden",
+        "type": "text",
+        "default": ""
+    },
+    {
+        "id": "login_retries",
+        "label": "Retries count for Seasonvar Web Login",
+        "type": "text",
+        "default": "5"
+    },
+    {
+      "id": "history_len",
+      "label": "History Length",
+      "type": "text",
+      "default": "50"
+    },
+    {
+      "id": "dev_mode",
+      "label": "Channel Developer Mode",
+      "type": "bool",
+      "default": "false"
+    },
+    {
+      "id": "force_web",
+      "label": "Force Web Data over API",
+      "type": "bool",
+      "default": "false"
+    }
+]
