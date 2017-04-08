@@ -3,8 +3,11 @@
 [api]: [http://seasonvar.ru/?mod=api]
 [marks]: [http://seasonvar.ru/?mod=pause]
 
-# Основная функциональность
 ___
+[![Gitter](https://badges.gitter.im/dein0s/seasonvar_ru.bundle.svg)](https://gitter.im/dein0s/seasonvar_ru.bundle?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+___
+# Основная функциональность
+
 #### Легенда:
 
 _\*acc_ - необходимо указать в настройках плагина логин и пароль для [сайта][svru].
