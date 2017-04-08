@@ -9,6 +9,7 @@ from utils import get_public_ip, logger, L, F, make_fake_url, update_api_key
 from web_seasonvar_extra import check_ip_and_allow, get_api_key
 from DumbTools import DumbKeyboard
 from functools import wraps
+from updater import Updater
 
 
 #############################
@@ -68,6 +69,7 @@ def Start():
 @route(PREFIX)
 def MainMenu():
     oc = ObjectContainer()
+    Updater(PREFIX + '/update', oc)
     oc.add(DirectoryObject(key=Callback(UpdatesFolder), title=L('MAIN_LATEST_UPDATES'), thumb=R('icon_updates.png')))
     oc.add(DirectoryObject(key=Callback(Dummy), title=L('MAIN_BOOKMARKS'), thumb=R('icon_bookmarks.png')))
     oc.add(DirectoryObject(key=Callback(SearchFolder), title=L('MAIN_SEARCH'), thumb=R('icon_search.png')))

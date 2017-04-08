@@ -13,10 +13,11 @@ class ERROR(object):
 
 class INFO(object):
     HEADER = 'INFO'
+    UPDATER_SUCCESS = L('MSG_INFO_UPDATER_SUCCESS')  # NB: Further usage with F() and version as arg
     # API_KEY_UPDATED = L('MSG_INFO_API_KEY_UPDATED')
     API_KEY_VALID = L('MSG_INFO_API_KEY_VALID')
     # DISPLAY_API_KEYS = 'Prefs: {} || Web: {}'
     HISTORY_CLEARED = L('MSG_INFO_HISTORY_CLEARED')
     HISTORY_EMPTY = L('MSG_INFO_HISTORY_EMPTY')
     CACHE_CLEARED = L('MSG_INFO_CACHE_CLEARED')
-    IP_ALLOWED = L('MSG_INFO_IP_ALLOWED') # NB: Further usage with F() and IP as arg
+    IP_ALLOWED = L('MSG_INFO_IP_ALLOWED')  # NB: Further usage with F() and IP as arg

@@ -1,4 +1,5 @@
 {
+  "MAIN_UPDATER": "Update: %s",
   "MAIN_BOOKMARKS": "Bookmarks",
   "MAIN_FILTER": "Filter",
   "MAIN_HISTORY": "History",
@@ -36,5 +37,6 @@
   "MSG_INFO_HISTORY_CLEARED": "History cleared",
   "MSG_INFO_HISTORY_EMPTY": "History is empty",
   "MSG_INFO_CACHE_CLEARED": "Cache cleared",
-  "MSG_INFO_IP_ALLOWED": "Current public IP %s is allowed"
+  "MSG_INFO_IP_ALLOWED": "Current public IP %s is allowed",
+  "MSG_INFO_UPDATER_SUCCESS": "Plugin updated to version %s"
 }

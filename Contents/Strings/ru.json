@@ -1,4 +1,5 @@
 {
+  "MAIN_UPDATER": "Обновление: %s",
   "MAIN_BOOKMARKS": "Закладки",
   "MAIN_FILTER": "Фильтр",
   "MAIN_HISTORY": "История",
@@ -36,5 +37,6 @@
   "MSG_INFO_HISTORY_CLEARED": "История очищена",
   "MSG_INFO_HISTORY_EMPTY": "История отсутствует",
   "MSG_INFO_CACHE_CLEARED": "Кэш очищен",
-  "MSG_INFO_IP_ALLOWED": "Текущий публичный IP %s разрешен"
+  "MSG_INFO_IP_ALLOWED": "Текущий публичный IP %s разрешен",
+  "MSG_INFO_UPDATER_SUCCESS": "Плагин обновлен до версии %s"
 }
