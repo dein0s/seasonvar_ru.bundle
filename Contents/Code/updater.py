@@ -73,7 +73,6 @@ class Updater:
             return version
 
     def IsUpdateAvailable(self):
-        Log.Debug('!!! ENTERED IsUpdateAvailable()!!!')
         try:
             info = JSON.ObjectFromURL(
                 self.info['url'],
@@ -107,7 +106,6 @@ class Updater:
         return bool(self.update)
 
     def InitBundleInfo(self):
-        Log.Debug('!!! ENTERED InitBundleInfo()!!!')
         try:
             dev_version = Core.storage.load(
                 Core.storage.abs_path(Core.storage.join_path(Core.bundle_path, 'Contents','.dev-version')))

@@ -32,6 +32,8 @@ def get_latest_updates(day_count=1):
 
 
 def get_search_results(query, country=[], genre=[]):
+    if query is None:
+        raise Ex.MediaNotAvailable
     if Prefs['force_web']:
         return web.get_search_results(query)
     if Prefs['api_key']:

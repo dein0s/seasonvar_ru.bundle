@@ -1,7 +1,6 @@
 # -*- coding: UTF-8 -*-
 import constants
 from utils import logger
-# import requests  # TODO: think about switching to it
 
 
 API_URL = 'http://api.seasonvar.ru'

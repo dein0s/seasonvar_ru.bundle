@@ -42,14 +42,26 @@
       "default": "50"
     },
     {
-      "id": "dev_mode",
-      "label": "Channel Developer Mode",
+      "id": "adv_menu",
+      "label": "Channel Advanced Menu",
+      "type": "bool",
+      "default": "false"
+    },
+    {
+      "id": "dev_menu",
+      "label": "Channel Developer Menu",
       "type": "bool",
       "default": "false"
     },
     {
       "id": "force_web",
       "label": "Force Web Data over API",
+      "type": "bool",
+      "default": "false"
+    },
+    {
+      "id": "tmp_bookmark_season",
+      "label": " Use alt bookmark actions",
       "type": "bool",
       "default": "false"
     }

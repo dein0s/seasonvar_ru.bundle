@@ -165,9 +165,13 @@ def get_season_playlist(page_html):
             if translate not in cnst.UNSUPPORTED_TRANSLATES:
                 if translate not in result:
                     result[translate] = []
+                if ' SD' in episode['comment']:
+                    name = episode['comment'][:episode['comment'].find(' SD')]
+                else:
+                    name = Re.EPISODE_COMMENT_NAME.search(episode['comment']).group(1)
                 fmt_episode = {
                     'link': episode['file'],
-                    'name': Re.EPISODE_COMMENT_NAME.search(episode['comment']).group(1),
+                    'name': name,
                     'perevod': translate,
                     'episode_id': Re.EPISODE_COMMENT_ID.search(episode['comment']).group(1)
                 }
