@@ -1,9 +1,11 @@
-# -*- coding: UTF-8 -*-
+# coding=utf-8
+
+# Bundle Library
 import constants
 from utils import logger
 
-
 API_URL = 'http://api.seasonvar.ru'
+
 
 class COMMANDS(object):
     GET_COUNTRY_LIST = 'getCountryList'

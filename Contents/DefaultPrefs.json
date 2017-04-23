@@ -58,11 +58,5 @@
       "label": "Force Web Data over API",
       "type": "bool",
       "default": "false"
-    },
-    {
-      "id": "tmp_bookmark_season",
-      "label": " Use alt bookmark actions",
-      "type": "bool",
-      "default": "false"
     }
 ]

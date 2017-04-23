@@ -1,11 +1,12 @@
 # coding=utf-8
 
-import re
-import api_seasonvar_data as api
-import constants as cnst
-from utils import make_title
+# Standard Library
 from collections import OrderedDict
 
+# Bundle Library
+import constants as cnst
+import api_seasonvar_data as api
+from utils import logger, make_title
 
 MAIN_PAGE_CACHE_TIME = 60 * 5  # 5 mins
 SEASON_PAGE_CACHE_TIME = 60 * 5  # 5 mins
@@ -28,9 +29,7 @@ class Re(object):
     SEARCH_SUGGESTION_NAME = Regex('^(.*?)\s\/')
     SEARCH_SUGGESTION_NAME_ALT = Regex('^(.*?)\s\(')
 
-from utils import logger
 
-@logger
 def get_request(url, **kwargs):
     url = url if cnst.URL_SV.MAIN in url else cnst.URL_SV.MAIN + url
     headers = {
@@ -55,6 +54,10 @@ def get_request(url, **kwargs):
         headers.update({'Cookie' : '; '.join('%s=%s' % (k, v) for k, v in kwargs.pop('cookies').items())})
     response = HTTP.Request(url=url, headers=headers, cacheTime=cacheTime, **kwargs)
     return response
+
+
+def post_request(url, data, **kwargs):
+    return get_request(url, values=data, **kwargs)
 
 
 def get_update_list(day_count=1):
@@ -119,7 +122,7 @@ def get_season_data_by_link(url):
             'season_id': season_id,
             'name': name,
             'summary': summary,
-            'season_number': season_number,
+            'season_number': int(season_number),
             'title': make_title(season_number, name),
             'thumb': make_thumb_url(season_id),
             'rating': average_rating(ratings_block),
@@ -229,7 +232,7 @@ def get_search_results(query):
     """
     url = cnst.URL_SV.AUTOCOMPLETE + '?query=%s' % query
     response_json = JSON.ObjectFromString(get_request(url, cache=MAIN_PAGE_CACHE_TIME).content)
-    result = OrderedDict()
+    result = {}
     for index, item in enumerate(response_json['data']):
         if 'serial-' in item:
             season_id = response_json['id'][index]
@@ -247,10 +250,12 @@ def get_search_results(query):
             result[season_id] = {
                 'season_id': season_id,
                 'name': name,
+                'season': int(season_number),
                 'title': make_title(season_number, name),
                 'thumb': make_thumb_url(season_id),
             }
-    return result
+    sorted_result = OrderedDict(sorted(result.items(), key=lambda k: (k[1]['name'], k[1]['season']), reverse=False))
+    return sorted_result
 
 
 def get_season_link_by_id(show_name, season_id):

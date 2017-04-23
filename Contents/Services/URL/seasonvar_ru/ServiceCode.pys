@@ -1,4 +1,6 @@
 # coding=utf-8
+
+# Standard Library
 import urllib
 # NB: becase of the sandbox restrictions (can't access server via HTTP and can't access plugins Dict)
 # and i also don't want to duplicate large pieces of code because of this restrictions
@@ -64,12 +66,15 @@ def MediaObjectsForURL(url):
                         )
                     )
                 ],
+            bitrate=312,
+            video_frame_rate=unicode(23976.0/1000.0),
+            aspect_ratio=16.0/9.0,
             container=Container.MP4,
             video_codec=VideoCodec.H264,
-            video_resolution='720',
+            video_resolution='406',
             audio_codec=AudioCodec.AAC,
             audio_channels=2,
-            optimized_for_streaming=False
+            optimized_for_streaming=True
             )
         ]
     return mo

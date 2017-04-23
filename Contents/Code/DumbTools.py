@@ -1,15 +1,28 @@
 # coding=utf-8
-
 # DumbTools for Plex v1.1 by Cory <babylonstudio@gmail.com>
+
+# Standard Library
 import urllib2
+
+
+class DumbKeyboardNew(object):
+    clients = ['Plex for iOS', 'Plex Media Player', 'Plex Web', 'Plex for Samsung']
+    layouts = ['ru', 'en']
+    EN_KEYS = list('abcdefghijklmnopqrstuvwxyz')
+    RU_KEYS = list(u'абвгдеёжзийклмнопрстуфхцчшщъыьэюя')
+    NUM_KEYS = list('1234567890')
+    SYM_KEYS = list('-=;[]\\\',./!@#$%^&*()_+:{}|\"<>?')
+
+    # TODO: implement rest
+
+
 
 
 class DumbKeyboard:
     clients = ['Plex for iOS', 'Plex Media Player', 'Plex Web', 'Plex for Samsung']
-    ENG_KEYS = list('abcdefghijklmnopqrstuvwxyz1234567890-=;[]\\\',./')
-    SHIFT_ENG_KEYS = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+:{}|\"<>?')
-    NUMBER_KEYS = list('1234567890')
-    # TODO: add Russian here
+    KEYS = list('abcdefghijklmnopqrstuvwxyz1234567890-=;[]\\\',./')
+    SHIFT_KEYS = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+:{}|\"<>?')
+    NUM_KEYS = list('1234567890')
 
     def __init__(self, prefix, oc, callback, dktitle=None, dkthumb=None,
                  dkplaceholder=None, dksecure=False, dknumbersonly=False, **kwargs):
@@ -56,17 +69,18 @@ class DumbKeyboard:
         if query is not None:
             oc.add(DirectoryObject(key=Callback(self.Keyboard, query=query[:-1]),
                                    title='Backspace'))
+            oc.add(DirectoryObject(key=Callback(self.Keyboard, query=None), title='Clear'))
         # Shift
         oc.add(DirectoryObject(key=Callback(self.Keyboard, query=query, shift=True),
                                title='Shift'))
         # Keys
         if self.numbers_only:
-            for key in self.NUMBER_KEYS:
+            for key in self.NUM_KEYS:
                 oc.add(DirectoryObject(key=Callback(self.Keyboard,
                                                     query=query+key if query else key),
                                        title=u'%s'%key))
         else:
-            for key in self.ENG_KEYS if not shift else self.SHIFT_ENG_KEYS:
+            for key in self.KEYS if not shift else self.SHIFT_KEYS:
                 oc.add(DirectoryObject(key=Callback(self.Keyboard,
                                                     query=query+key if query else key),
                                        title=u'%s'%key))

@@ -19,6 +19,7 @@ class URL_SV(object):
     LOGIN = '/?mod=login'
     PLAYER = '/player.php'
     AUTOCOMPLETE = '/autocomplete.php'
+    BOOKMARKS = '/jsonMark.php'
     SEARCH = '/search'
 
 

@@ -1,11 +1,13 @@
 # coding=utf-8
 
-import api_seasonvar_data as api
-import web_seasonvar_data as web
-import constants as cnst
-from utils import make_title
+# Standard Library
 from collections import OrderedDict
 
+# Bundle Library
+import constants as cnst
+import api_seasonvar_data as api
+import web_seasonvar_data as web
+from utils import make_title
 
 # TODO: add trailers as extras Framework.bundle/Contents/Resources/Versions/2/Models/Metadata/tv_models.pym
 

@@ -1,15 +1,18 @@
 # coding=utf-8
 
-# TODO: check, change and localize all strings (titles, prefixes, names, etc.)
-
-import constants as const
-import factory
-import messages
-from utils import get_public_ip, logger, L, F, make_fake_url, update_api_key
-from web_seasonvar_extra import check_ip_and_allow, get_api_key
-from DumbTools import DumbKeyboard
+# Standard Library
 from functools import wraps
+
+# Bundle Library
+import cache
+import factory
+import history
+import messages
+import bookmarks
+from utils import F, L, get_public_ip, make_fake_url, update_api_key
 from updater import Updater
+from DumbTools import DumbKeyboard
+from web_seasonvar_extra import get_api_key, check_ip_and_allow
 
 
 #############################
@@ -35,31 +38,6 @@ ICON_SEASONVAR = 'logo_main.png'
 ERROR_HEADER = messages.ERROR.HEADER
 INFO_HEADER = messages.INFO.HEADER
 
-HISTORY_KEY = 'history'
-try:
-    HISTORY_MAX_LEN = int(Prefs['history_len'])
-except:
-    HISTORY_MAX_LEN = 50
-
-BOOKMARKS_KEY = 'bookmarks'
-BOOKMARKS_FILE = 'Bookmarks.json'
-BOOKMARKS_FILE_PATH = Core.storage.abs_path(Core.storage.join_path(Core.bundle_path, BOOKMARKS_FILE))
-
-CACHE_INVALID_AFTER_KEY = 'invalid_after'
-
-SEASON_CACHE_KEY = 'season_cache'
-SEASON_CACHE_INVALIDATE = 60 * 5  # 5 mins
-
-UPDATES_CACHE_KEY = 'update_cache'
-
-GENRE_CACHE_KEY = 'genre_cache'
-GENRE_CACHE_INVALIDATE = 60 * 60 * 3  # 3 hrs
-
-COUNTRY_CACHE_KEY = 'country_cache'
-COUNTRY_CACHE_INVALIDATE = 60 * 60 * 3  # 3 hrs
-
-CACHE_KEYS = [UPDATES_CACHE_KEY, SEASON_CACHE_KEY, GENRE_CACHE_KEY, COUNTRY_CACHE_KEY]
-
 
 #############################
 ###    Init                ##
@@ -67,11 +45,8 @@ CACHE_KEYS = [UPDATES_CACHE_KEY, SEASON_CACHE_KEY, GENRE_CACHE_KEY, COUNTRY_CACH
 def Start():
     Locale.DefaultLocale = Prefs['language'].split('/')[1]  # NB: Language in prefs as 'English/en'
     ObjectContainer.title1 = TITLE
-    if BOOKMARKS_KEY not in Dict:
-        Dict[BOOKMARKS_KEY] = {}
-    if HISTORY_KEY not in Dict:
-        Dict[HISTORY_KEY] = {}
-    Dict.Save()
+    history.init_history()
+    bookmarks.init_marks()
 
 
 @handler(PREFIX, TITLE, art=ART_SEASONVAR, thumb=ICON_SEASONVAR)
@@ -83,7 +58,8 @@ def MainMenu():
     oc.add(DirectoryObject(key=Callback(BookmarksFolder), title=L('MAIN_BOOKMARKS'), thumb=R('icon_bookmarks.png')))
     oc.add(DirectoryObject(key=Callback(SearchFolder), title=L('MAIN_SEARCH'), thumb=R('icon_search.png')))
     oc.add(DirectoryObject(key=Callback(HistoryFolder), title=L('MAIN_HISTORY'), thumb=R('icon_history.png')))
-    oc.add(DirectoryObject(key=Callback(Dummy), title=L('MAIN_FILTER'), thumb=R('icon_filter.png')))
+    if Prefs['api_key']:
+        oc.add(DirectoryObject(key=Callback(Dummy), title=L('MAIN_FILTER'), thumb=R('icon_filter.png')))
     oc.add(DirectoryObject(key=Callback(ToolsFolder), title=L('MAIN_TOOLS'), thumb=R('icon_tools.png')))
     return oc
 
@@ -112,10 +88,10 @@ def GetUpdatesFolder(query=1):
     try:
         query = int(query)
     except:
-        return MessageContainer(header=ERROR_HEADER, message=messages.ERROR.ONLY_NUMBERS_ALLOWED)
+        query = 1
     oc = ObjectContainer(title2=F('LATEST_UPDATES_FOR', query))
     updates_data = factory.get_latest_updates(day_count=query)
-    SetCache(UPDATES_CACHE_KEY, updates_data)
+    cache.set_updates_cache(updates_data)
     for season in updates_data.values():
         oc.add(DirectoryObject(key=Callback(GetSeasonFolder, show_name=season['name'], season_id=season['season_id'],
                                             check_updates=True), thumb=season['thumb'], title=season['title'],
@@ -165,11 +141,11 @@ def GetSearchResultFolder(query=None, genre=[], country=[]):
 
 @route(PREFIX + '/search/{query}/genre', genre=list, country=list)
 def GetSearchGenreFolder(query=None, genre=[], country=[]):
-    genre_list = GetGenreCacheOrCreate()
+    genre_list = cache.get_genre_cache_or_create()
     done_title = L('SEARCH_DONE')
     if Client.Product in DumbKeyboard.clients:
         done_title = done_title + ': %s' % ''.join('[%s]' % g for g in genre)
-    oc = ObjectContainer()  # TODO: think about how to deal with web player back navigation
+    oc = ObjectContainer()
     oc.add(DirectoryObject(key=Callback(SearchFolder, query=query, country=country, genre=genre), title=done_title))
     if genre:
         oc.add(DirectoryObject(key=Callback(GetSearchGenreFolder, query=query, country=country, genre=genre[:-1]),
@@ -188,11 +164,11 @@ def GetSearchGenreFolder(query=None, genre=[], country=[]):
 
 @route(PREFIX + '/search/{query}/country', genre=list, country=list)
 def GetSearchCountryFolder(query=None, genre=[], country=[]):
-    country_list = GetCountryCacheOrCreate()
+    country_list = cache.get_country_cache_or_create()
     done_title = L('SEARCH_DONE')
     if Client.Product in DumbKeyboard.clients:
         done_title = done_title + ': %s' % ''.join('[%s]' % c for c in country)
-    oc = ObjectContainer()  # TODO: think about how to deal with web player back navigation
+    oc = ObjectContainer()
     oc.add(DirectoryObject(key=Callback(SearchFolder, query=query, country=country, genre=genre), title=done_title))
     if country:
         oc.add(DirectoryObject(key=Callback(GetSearchCountryFolder, query=query, country=country[:-1], genre=genre),
@@ -200,7 +176,7 @@ def GetSearchCountryFolder(query=None, genre=[], country=[]):
         oc.add(DirectoryObject(key=Callback(GetSearchCountryFolder, query=query, country=[], genre=genre),
                                title=L('SEARCH_REMOVE_ALL')))
     for item in country_list.values():
-        if item not in genre:
+        if item not in country:
             oc.add(DirectoryObject(key=Callback(GetSearchCountryFolder, query=query, country=country+[item],
                                                 genre=genre), title=item))
         else:
@@ -214,8 +190,8 @@ def GetSearchCountryFolder(query=None, genre=[], country=[]):
 #############################
 @route(PREFIX + '/season/{season_id}', check_updates=bool)
 def GetSeasonFolder(show_name, season_id, check_updates=False):
-    season = GetSeasonCacheOrCreate(show_name, season_id, as_string=False)
-    PushToHistory(season)
+    season = cache.get_season_cache_or_create(show_name, season_id)
+    history.push_to_history(season)
     oc = ObjectContainer(title2=season['title'], no_cache=True)
 
     if season['playlist']:
@@ -227,72 +203,42 @@ def GetSeasonFolder(show_name, season_id, check_updates=False):
         oc.add(DirectoryObject(key=Callback(GetOtherSeasonsFolder, show_name=show_name, season_id=season_id),
                                title=L('SEASON_OTHER_SEASONS_FOLDER'), thumb=season['thumb'], art=season['thumb']))
 
-    if season_id in Dict[BOOKMARKS_KEY]:
+    if bookmarks.is_marked(season_id):
         # NB: sadly we can't navigate back to season folder because of https://forums.plex.tv/discussion/comment/1416318
-        last_watched = Dict[BOOKMARKS_KEY][season_id]['last_watched']
+        last_watched = bookmarks.get_mark(season_id)['last_watched']
         if Client.Product in DumbKeyboard.clients:
-            if Prefs['tmp_bookmark_season']:  # TODO: test and keep 1 variant
-                DumbKeyboard(PREFIX, oc, SeasonAddBookmark, show_name=show_name, season_id=season_id,
-                             check_updates=check_updates, dktitle=F('SEASON_UPDATE_BOOKMARK', last_watched),
-                             dknumbersonly=True, dkthumb=R('icon_add.png'))
-            else:
-                DumbKeyboard(PREFIX, oc, BookmarksAdd, show_name=show_name, season_id=season_id,
-                             dktitle=F('SEASON_UPDATE_BOOKMARK', last_watched), dknumbersonly=True,
-                             dkthumb=R('icon_add.png'))
-
+            DumbKeyboard(PREFIX, oc, BookmarksAdd, show_name=show_name, season_id=season_id,
+                         dktitle=F('SEASON_UPDATE_BOOKMARK', last_watched), dknumbersonly=True,
+                         dkthumb=R('icon_add.png'))
         else:
-            if Prefs['tmp_bookmark_season']:  # TODO: test and keep 1 variant
-                oc.add(InputDirectoryObject(key=Callback(SeasonAddBookmark, show_name=show_name, season_id=season_id,
-                                                         check_updates=check_updates),
-                                            title=F('SEASON_UPDATE_BOOKMARK', last_watched), thumb=R('icon_add.png'),
-                                            art=season['thumb']))
-            else:
-                oc.add(InputDirectoryObject(key=Callback(BookmarksAdd, show_name=show_name, season_id=season_id),
-                                            title=F('SEASON_UPDATE_BOOKMARK', last_watched), thumb=R('icon_add.png'),
-                                            art=season['thumb']))
-
-        if Prefs['tmp_bookmark_season']:  # TODO: test and keep 1 variant
-            oc.add(DirectoryObject(key=Callback(SeasonDelBookmark, show_name=show_name, season_id=season_id,
-                                                check_updates=check_updates), title=L('SEASON_DEL_BOOKMARK'),
-                                                thumb=R('icon_del.png'), art=season['thumb']))
-        else:
-            oc.add(DirectoryObject(key=Callback(BookmarksDel, season_id=season_id), title=L('SEASON_DEL_BOOKMARK'),
-                                             thumb=R('icon_del.png'), art=season['thumb']))
+            oc.add(InputDirectoryObject(key=Callback(BookmarksAdd, show_name=show_name, season_id=season_id),
+                                        title=F('SEASON_UPDATE_BOOKMARK', last_watched), thumb=R('icon_add.png'),
+                                        art=season['thumb']))
+        oc.add(DirectoryObject(key=Callback(BookmarksDel, season_id=season_id), title=L('SEASON_DEL_BOOKMARK'),
+                                         thumb=R('icon_del.png'), art=season['thumb']))
 
     else:
         if Client.Product in DumbKeyboard.clients:
-            if Prefs['tmp_bookmark_season']:  # TODO: test and keep 1 variant
-                DumbKeyboard(PREFIX, oc, SeasonAddBookmark, show_name=show_name, season_id=season_id,
-                             check_updates=check_updates, dktitle=L('SEASON_ADD_BOOKMARK'), dknumbersonly=True,
-                             dkthumb=R('icon_add.png'))
-            else:
-                DumbKeyboard(PREFIX, oc, BookmarksAdd, show_name=show_name, season_id=season_id,
-                             dktitle=L('SEASON_ADD_BOOKMARK'), dknumbersonly=True, dkthumb=R('icon_add.png'))
-
+            DumbKeyboard(PREFIX, oc, BookmarksAdd, show_name=show_name, season_id=season_id,
+                         dktitle=L('SEASON_ADD_BOOKMARK'), dknumbersonly=True, dkthumb=R('icon_add.png'))
         else:
-            if Prefs['tmp_bookmark_season']:  # TODO: test and keep 1 variant
-                oc.add(InputDirectoryObject(key=Callback(SeasonAddBookmark, show_name=show_name, season_id=season_id,
-                                                         check_updates=check_updates),
-                                            title=L('SEASON_ADD_BOOKMARK'), thumb=R('icon_add.png'),
-                                            art=season['thumb']))
-            else:
-                oc.add(InputDirectoryObject(key=Callback(BookmarksAdd, show_name=show_name, season_id=season_id),
-                                            title=L('SEASON_ADD_BOOKMARK'), thumb=R('icon_add.png'),
-                                            art=season['thumb']))
-
+            oc.add(InputDirectoryObject(key=Callback(BookmarksAdd, show_name=show_name, season_id=season_id),
+                                        title=L('SEASON_ADD_BOOKMARK'), thumb=R('icon_add.png'),
+                                        art=season['thumb']))
     return oc
 
 
 @route(PREFIX + '/season/{season_id}/translates', check_updates=bool)
 def GetTranslatesFolder(show_name, season_id, check_updates):
-    season = GetSeasonCacheOrCreate(show_name, season_id, as_string=False)
+    season = cache.get_season_cache_or_create(show_name, season_id)
     oc = ObjectContainer(title2=season['title'], content=ContainerContent.Seasons)
     for trans_index, translate in enumerate(season['playlist'].keys()):
         fake_url = make_fake_url(show_name=show_name, season_id=season_id, translate=translate)
         title = translate
         if check_updates:
-            if season_id in Dict[UPDATES_CACHE_KEY]:
-                update_messages = Dict[UPDATES_CACHE_KEY][season_id]['update_messages']
+            updates_cache = cache.get_updates_cache()
+            if season_id in updates_cache:
+                update_messages = updates_cache[season_id]['update_messages']
                 # NB: know why? because FUCK YOU! that's why... NameError: global name 'any' is not defined
                 if True in [translate in message for message in update_messages]:
                     title = '(*) ' + title
@@ -301,8 +247,8 @@ def GetTranslatesFolder(show_name, season_id, check_updates):
                     ep_names = [ep['name'] for ep in season['playlist'][translate]]
                     if True in [ep_name in update_messages for ep_name in ep_names]:
                         title = '(*) ' + translate
-        if season_id in Dict[BOOKMARKS_KEY]:
-            last_watched = Dict[BOOKMARKS_KEY][season_id]['last_watched']
+        if bookmarks.is_marked(season_id):
+            last_watched = bookmarks.get_mark(season_id)['last_watched']
             translate_episodes = [ep['episode_id'] for ep in season['playlist'][translate]]
             if True in [int(ep) > int(last_watched) for ep in translate_episodes]:
                 title = '(!) ' + title
@@ -314,7 +260,7 @@ def GetTranslatesFolder(show_name, season_id, check_updates):
 
 @route(PREFIX + '/season/{season_id}/translates/{translate}')
 def GetEpisodesFolder(show_name, season_id, translate):
-    season = GetSeasonCacheOrCreate(show_name, season_id, as_string=False)
+    season = cache.get_season_cache_or_create(show_name, season_id)
     oc = ObjectContainer(title2=translate, content=ContainerContent.Episodes)
     for episode in season['playlist'][translate]:
         fake_url = make_fake_url(show_name=show_name, season_id=season_id, translate=translate,
@@ -325,7 +271,7 @@ def GetEpisodesFolder(show_name, season_id, translate):
 
 @route(PREFIX + '/season/{season_id}/other_seasons')
 def GetOtherSeasonsFolder(show_name, season_id):
-    season = GetSeasonCacheOrCreate(show_name, season_id, as_string=False)
+    season = cache.get_season_cache_or_create(show_name, season_id)
     if 'other_season' in season:
         oc = ObjectContainer()
         for item_season_number, item_season_id in season['other_season'].items():
@@ -337,24 +283,20 @@ def GetOtherSeasonsFolder(show_name, season_id):
     raise Ex.MediaNotAvailable
 
 
-# @route(PREFIX + '/season/{season_id}/bookmark/del', check_updates=bool)
-def SeasonDelBookmark(show_name, season_id, check_updates):
-    BookmarksDel(season_id)
-    return GetSeasonFolder(show_name, season_id, check_updates=check_updates)
+# NB: data for URLService
+@route(PREFIX + '/cache/season_cache/{season_id}')
+def SeasonCache(show_name, season_id):
+    season_cache = cache.get_season_cache_or_create(show_name, season_id)
+    return JSON.StringFromObject(season_cache)
 
-
-# @route(PREFIX + '/season/{season_id}/bookmark/add', check_updates=bool)
-def SeasonAddBookmark(show_name, season_id, check_updates, query=None):
-    BookmarksAdd(show_name, season_id, query)
-    return GetSeasonFolder(show_name, season_id, check_updates=check_updates)
 
 #############################
 ###    Bookmarks           ##
 #############################
 @route(PREFIX + '/bookmarks')
 def BookmarksFolder():
-    bookmarks = Dict[BOOKMARKS_KEY]
-    if not bookmarks and not Prefs['adv_menu']:
+    marks = bookmarks.get_all_marks()
+    if not marks and not Prefs['adv_menu']:
         return MessageContainer(header=INFO_HEADER, message=messages.INFO.BOOKMARKS_EMPTY)
     oc = ObjectContainer()
     if Prefs['adv_menu']:
@@ -363,7 +305,10 @@ def BookmarksFolder():
                                thumb=R('icon_import.png')))
         oc.add(DirectoryObject(key=Callback(BookmarksExportFile), title=L('BOOKMARKS_EXPORT_FILE'),
                                thumb=R('icon_export.png')))
-    for season in bookmarks.values():
+        if Prefs['password'] and Prefs['username']:
+            oc.add(DirectoryObject(key=Callback(BookmarksSyncWeb), title=L('BOOKMARKS_SYNC_SITE'),
+                                   thumb=R('icon_sync.png')))
+    for season in sorted(marks.values(),key=lambda k: int(k['season_id']), reverse=True):
         oc.add(DirectoryObject(key=Callback(GetSeasonFolder, show_name=season['name'], season_id=season['season_id']),
                                title=season['title'], thumb=season['thumb'], art=season['thumb']))
     return oc
@@ -371,58 +316,37 @@ def BookmarksFolder():
 
 @route(PREFIX + '/bookmarks/add/{season_id}')
 def BookmarksAdd(show_name, season_id, query=None):
-    season = GetSeasonCacheOrCreate(show_name, season_id, as_string=False)
-    current_episodes = set([0])
-    for translate in season['playlist']:
-        for episode in season['playlist'][translate]:
-            current_episodes.add(int(episode['episode_id']))
-    try:
-        episode_id = int(query)
-    except:
-        episode_id = 0
-    if episode_id in current_episodes:
-        Dict[BOOKMARKS_KEY][season_id] = {
-            'season_id': season['season_id'],
-            'name': season['name'],
-            'title': season['title'],
-            'thumb': season['thumb'],
-            'last_watched': episode_id
-        }
-        Dict.Save()
+    bookmarks.add_mark(show_name, season_id, query)
     return MessageContainer(header=INFO_HEADER, message=messages.INFO.BOOKMARK_ADDED)
 
 
 @route(PREFIX + '/bookmarks/del/{season_id}')
 def BookmarksDel(season_id):
-    if season_id in Dict[BOOKMARKS_KEY]:
-        del Dict[BOOKMARKS_KEY][season_id]
-        Dict.Save()
-        Log.Debug('> BOOKMARK %s DELETED <' % season_id)
+    bookmarks.del_mark(season_id)
     return MessageContainer(header=INFO_HEADER, message=messages.INFO.BOOKMARK_DELETED)
 
 
 @route(PREFIX + '/bookmarks/clear')
 def BookmarksClear():
-    Dict[BOOKMARKS_KEY] = {}
-    Dict.Save()
+    bookmarks.set_empty_marks()
     return MessageContainer(header=INFO_HEADER, message=messages.INFO.BOOKMARKS_CLEARED)
 
 @route(PREFIX + '/bookmarks/export/file')
 def BookmarksExportFile():
-    bookmarks = JSON.StringFromObject(Dict[BOOKMARKS_KEY])
-    Core.storage.save(BOOKMARKS_FILE_PATH, bookmarks)
-    Log.Debug('> BOOKMARKS EXPORTED TO FILE %s <' % BOOKMARKS_FILE_PATH)
+    bookmarks.export_marks_to_file()
     return MessageContainer(header=INFO_HEADER, message=messages.INFO.BOOKMARKS_EXPORTED)
 
 
 @route(PREFIX + '/bookmarks/import/file')
 def BookmarksImportFile():
-    bookmarks = JSON.ObjectFromString(Core.storage.load(BOOKMARKS_FILE_PATH))
-    for item in bookmarks.values():
-        Dict[BOOKMARKS_KEY][item['season_id']] = item
-    Dict.Save()
-    Log.Debug('> BOOKMARKS IMPORTED FROM FILE %s <' % BOOKMARKS_FILE_PATH)
+    bookmarks.import_marks_from_file()
     return MessageContainer(header=INFO_HEADER, message=messages.INFO.BOOKMARKS_IMPORTED)
+
+
+@route(PREFIX + '/bookmarks/sync')
+def BookmarksSyncWeb():
+    bookmarks.sync_with_seasonvar_site()
+    return MessageContainer(header=INFO_HEADER, message=messages.INFO.BOOKMARKS_SYNCED)
 
 
 #############################
@@ -430,12 +354,12 @@ def BookmarksImportFile():
 #############################
 @route(PREFIX + '/history')
 def HistoryFolder():
-    history = Dict[HISTORY_KEY]
-    if not history:
+    plugin_history = history.get_history()
+    if not plugin_history:
         return MessageContainer(header=INFO_HEADER, message=messages.INFO.HISTORY_EMPTY)
-    oc = ObjectContainer(title2=F('HISTORY_ITEMS', len(history) if history else 0, HISTORY_MAX_LEN))
+    oc = ObjectContainer(title2=F('HISTORY_ITEMS', len(plugin_history) if history else 0, history.HISTORY_MAX_LEN))
     oc.add(DirectoryObject(key=Callback(HistoryClear), title=L('HISTORY_CLEAR'), thumb=R('icon_clear.png')))
-    for season in sorted(history.values(),key=lambda k: k['time_added'], reverse=True):
+    for season in sorted(plugin_history.values(), key=lambda k: k['time_added'], reverse=True):
         oc.add(DirectoryObject(key=Callback(GetSeasonFolder, show_name=season['name'], season_id=season['season_id']),
                                title=season['title'], thumb=season['thumb'], art=season['thumb']))
     return oc
@@ -443,30 +367,8 @@ def HistoryFolder():
 
 @route(PREFIX + '/history/clean')
 def HistoryClear():
-    if Dict[HISTORY_KEY]:
-        del Dict[HISTORY_KEY]
-        Dict.Save()
+    history.set_empty_history()
     return MessageContainer(header=INFO_HEADER, message=messages.INFO.HISTORY_CLEARED)
-
-
-@route (PREFIX + '/history/push')
-def PushToHistory(data):
-    history = Dict[HISTORY_KEY]
-    history[data['season_id']] = {
-        'season_id': data['season_id'],
-        'name': data['name'],
-        'title': data['title'],
-        'thumb': data['thumb'],
-        'time_added': Datetime.TimestampFromDatetime(Datetime.UTCNow())
-    }
-    # NB: trim history
-    if len(history) > HISTORY_MAX_LEN:
-        trimmed_history = sorted(history.values(), key=lambda k: k['time_added'], reverse=True)[:HISTORY_MAX_LEN]
-        history = {}
-        for item in trimmed_history:
-            history[item['season_id']] = item
-    Dict[HISTORY_KEY] = history
-    Dict.Save()
 
 
 #############################
@@ -508,20 +410,15 @@ def ToolCheckIp():
 @route(PREFIX + '/tools/debug')
 def ToolDebug():
     log_debug('>>> DEBUG START <<<')
-    # for item in Dict:
-    #     log_debug('%s %s' % (item, type(Dict[item])))
-    var = Dict[BOOKMARKS_KEY]
-    log_debug('>>> %s <<<' % var)
+    var = 'THIS IS DEBUG'
+    log_debug('!! %s !!' % var)
     log_debug('>>> DEBUG END <<<')
-    return MessageContainer(header=INFO_HEADER, message='TEST')
+    return MessageContainer(header=INFO_HEADER, message=var)
 
 
 @route(PREFIX + '/tools/clear_cache')
 def ToolClearCache():
-    for key in CACHE_KEYS:
-        if Dict[key]:
-            del Dict[key]
-    Dict.Save()
+    cache.clear_cache()
     return MessageContainer(header=INFO_HEADER, message=messages.INFO.CACHE_CLEARED)
 
 @route(PREFIX + '/tools/clear_dict')
@@ -539,81 +436,3 @@ def ToolClearDict():
 @not_implemented
 def Dummy():
     return None
-
-
-#############################
-###    Cache               ##
-#############################
-def GetCacheOrInvalidate(key):
-    from copy import deepcopy
-    cache = deepcopy(Dict[key])
-    if cache:
-        if CACHE_INVALID_AFTER_KEY in cache:
-            if Datetime.FromTimestamp(cache[CACHE_INVALID_AFTER_KEY]) > Datetime.UTCNow():
-                cache.pop(CACHE_INVALID_AFTER_KEY)
-            else:
-                del Dict[key]
-                Dict.Save()
-                cache = None
-    return cache
-
-
-@route(PREFIX + '/cache/{key}')
-def SetCache(key, data):
-    if Dict[key]:
-        del Dict[key]
-    Dict[key] = data
-    Dict.Save()
-
-
-def SetSeasonCache(data):
-    cache = GetCacheOrInvalidate(SEASON_CACHE_KEY)
-    if not cache or cache != data:
-        data[CACHE_INVALID_AFTER_KEY] = Datetime.TimestampFromDatetime(
-            Datetime.UTCNow() + Datetime.Delta(seconds=SEASON_CACHE_INVALIDATE))
-        SetCache(SEASON_CACHE_KEY, data)
-
-
-def SetGenreCache(data):
-    cache = GetCacheOrInvalidate(GENRE_CACHE_KEY)
-    if not cache or cache != data:
-        data[CACHE_INVALID_AFTER_KEY] = Datetime.TimestampFromDatetime(
-            Datetime.UTCNow() + Datetime.Delta(seconds=GENRE_CACHE_INVALIDATE))
-        SetCache(GENRE_CACHE_KEY, data)
-
-
-def SetCountryCache(data):
-    cache = GetCacheOrInvalidate(COUNTRY_CACHE_KEY)
-    if not cache or cache != data:
-        data[CACHE_INVALID_AFTER_KEY] = Datetime.TimestampFromDatetime(
-            Datetime.UTCNow() + Datetime.Delta(seconds=COUNTRY_CACHE_INVALIDATE))
-        SetCache(COUNTRY_CACHE_KEY, data)
-
-
-@route(PREFIX + '/cache/season_cache/{season_id}', as_string=bool)
-def GetSeasonCacheOrCreate(show_name, season_id, as_string=True):
-    cache = GetCacheOrInvalidate(SEASON_CACHE_KEY)
-    if not cache or season_id != cache['season_id']:
-        SetSeasonCache(factory.get_season_data(show_name, season_id))
-        cache = GetCacheOrInvalidate(SEASON_CACHE_KEY)
-    if as_string:
-        return JSON.StringFromObject(cache)
-    return cache
-
-
-@route(PREFIX + '/cache/genre_cache')
-def GetGenreCacheOrCreate():
-    cache = GetCacheOrInvalidate(GENRE_CACHE_KEY)
-    if not cache:
-        SetGenreCache(factory.get_genre_list())
-        cache = GetCacheOrInvalidate(GENRE_CACHE_KEY)
-    return cache
-
-
-@route(PREFIX + '/cache/country_cache')
-def GetCountryCacheOrCreate():
-    cache = GetCacheOrInvalidate(COUNTRY_CACHE_KEY)
-    if not cache:
-        SetCountryCache(factory.get_country_list())
-        cache = GetCacheOrInvalidate(COUNTRY_CACHE_KEY)
-    return cache

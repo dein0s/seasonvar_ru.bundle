@@ -34,6 +34,10 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# Bundle Library
+import messages
+from utils import F, L
+
 KEY_PLIST_VERSION = 'CFBundleVersion'
 KEY_PLIST_URL = 'PlexPluginVersionUrl'
 
@@ -42,10 +46,6 @@ KEY_DATA_DESC = 'body'
 KEY_DATA_ZIPBALL = 'zipball_url'
 
 CHECK_INTERVAL = CACHE_1HOUR
-
-
-from utils import L, F
-import messages
 
 
 class Updater:

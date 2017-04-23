@@ -1,7 +1,10 @@
 # coding=utf-8
 
+# Standard Library
 from time import time
 from functools import wraps
+
+# Bundle Library
 import messages as msgs
 from DumbTools import DumbPrefs
 
