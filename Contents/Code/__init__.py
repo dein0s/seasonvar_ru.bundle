@@ -1,18 +1,18 @@
 # coding=utf-8
 
-# Standard Library
+# Standart Library
 from functools import wraps
 
 # Bundle Library
+import bookmarks
 import cache
 import factory
 import history
 import messages
-import bookmarks
-from utils import F, L, get_public_ip, make_fake_url, update_api_key
+from DumbTools import DumbKeyboard, DumbPrefs
 from updater import Updater
-from DumbTools import DumbKeyboard
-from web_seasonvar_extra import get_api_key, check_ip_and_allow
+from utils import F, L, get_public_ip, make_fake_url, update_api_key
+from web_seasonvar_extra import check_ip_and_allow, get_api_key
 
 
 #############################
@@ -76,7 +76,7 @@ def UpdatesFolder():
     if Client.Product in DumbKeyboard.clients:
         # NB: For clients, that cannot display InputDirectoryObject
         DumbKeyboard(PREFIX + '/updates', oc, GetUpdatesFolder, dktitle=L('LATEST_UPDATES_INPUT_PROMPT'),
-                     dknumbersonly=True)
+                     dkletters=False)
     else:
         oc.add(InputDirectoryObject(key=Callback(GetUpdatesFolder), title=L('LATEST_UPDATES_INPUT'),
                                     prompt=L('LATEST_UPDATES_INPUT_PROMPT')))
@@ -208,8 +208,7 @@ def GetSeasonFolder(show_name, season_id, check_updates=False):
         last_watched = bookmarks.get_mark(season_id)['last_watched']
         if Client.Product in DumbKeyboard.clients:
             DumbKeyboard(PREFIX, oc, BookmarksAdd, show_name=show_name, season_id=season_id,
-                         dktitle=F('SEASON_UPDATE_BOOKMARK', last_watched), dknumbersonly=True,
-                         dkthumb=R('icon_add.png'))
+                         dktitle=F('SEASON_UPDATE_BOOKMARK', last_watched), dkletters=False, dkthumb=R('icon_add.png'))
         else:
             oc.add(InputDirectoryObject(key=Callback(BookmarksAdd, show_name=show_name, season_id=season_id),
                                         title=F('SEASON_UPDATE_BOOKMARK', last_watched), thumb=R('icon_add.png'),
@@ -220,7 +219,7 @@ def GetSeasonFolder(show_name, season_id, check_updates=False):
     else:
         if Client.Product in DumbKeyboard.clients:
             DumbKeyboard(PREFIX, oc, BookmarksAdd, show_name=show_name, season_id=season_id,
-                         dktitle=L('SEASON_ADD_BOOKMARK'), dknumbersonly=True, dkthumb=R('icon_add.png'))
+                         dktitle=L('SEASON_ADD_BOOKMARK'), dkletters=False, dkthumb=R('icon_add.png'))
         else:
             oc.add(InputDirectoryObject(key=Callback(BookmarksAdd, show_name=show_name, season_id=season_id),
                                         title=L('SEASON_ADD_BOOKMARK'), thumb=R('icon_add.png'),
@@ -380,6 +379,10 @@ def ToolsFolder():
     oc = ObjectContainer(title2=L('MAIN_TOOLS'))
     if Prefs['dev_menu']:
         oc.add(DirectoryObject(key=Callback(ToolDebug), title=L('TOOLS_DEBUG'), thumb=R('icon_debug.png')))
+        if Client.Product in DumbKeyboard.clients:
+                DumbPrefs(PREFIX, oc, title=L('TOOLS_PREFS'), thumb=R('icon_prefs.png'))
+        else:
+                oc.add(PrefsObject(title=L('TOOLS_PREFS'), thumb=R('icon_prefs.png')))
         oc.add(DirectoryObject(key=Callback(ToolClearCache), title=L('TOOLS_CLEAR_CACHE'), thumb=R('icon_clear.png')))
         oc.add(DirectoryObject(key=Callback(ToolClearDict), title=L('TOOLS_CLEAR_DICT'), thumb=R('icon_clear.png')))
     if Prefs['username'] and Prefs['password']:

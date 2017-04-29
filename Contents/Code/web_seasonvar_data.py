@@ -1,11 +1,11 @@
 # coding=utf-8
 
-# Standard Library
+# Standart Library
 from collections import OrderedDict
 
 # Bundle Library
-import constants as cnst
 import api_seasonvar_data as api
+import constants as cnst
 from utils import logger, make_title
 
 MAIN_PAGE_CACHE_TIME = 60 * 5  # 5 mins

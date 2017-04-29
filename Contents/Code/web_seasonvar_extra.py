@@ -2,8 +2,8 @@
 
 # Bundle Library
 import constants as cnst
-from utils import make_title
 from api_seasonvar_data import get_genre_list
+from utils import make_title
 from web_seasonvar_data import get_request, post_request
 
 

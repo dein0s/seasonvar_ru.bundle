@@ -1,6 +1,6 @@
 # coding=utf-8
 
-# Standard Library
+# Standart Library
 from copy import deepcopy
 
 # Bundle Library

@@ -1,12 +1,11 @@
 # coding=utf-8
 
-# Standard Library
-from time import time
+# Standart Library
 from functools import wraps
+from time import time
 
 # Bundle Library
 import messages as msgs
-from DumbTools import DumbPrefs
 
 
 def get_public_ip(external=True):
@@ -55,7 +54,10 @@ def timer(func):
 
 def L(string):
     local_string = Locale.LocalString(string)
-    return str(local_string).decode()
+    try:
+        return str(local_string).decode()
+    except:
+        return local_string
 
 
 def F(string, *args):
@@ -72,6 +74,8 @@ def check_api_key_valid(api_key):
 
 
 def update_api_key(api_key):
+    # NB: Avoid ImportError
+    from DumbTools import DumbPrefs
     return DumbPrefs('DumbPrefs', ObjectContainer()).Set(key='api_key', value=api_key)
 
 
@@ -81,40 +85,9 @@ def make_fake_url(**kwargs):
         for k, v in kwargs.items():
             fake_url = fake_url + '#%s=%s' % (k, v)
         if 'X-Plex-Token' not in Request.Headers:
-            # NB: if user not authorized on PMS
+            # NB: User not authorized on PMS
             raise Ex.MediaNotAuthorized
         fake_url = fake_url + '#%s=%s' % ('token', Request.Headers['X-Plex-Token'])
         fake_url = String.Encode(fake_url)
         return 'http://plex/seasonvar_ru/' + fake_url
     return None
-
-# internal stuff
-
-# def timer_with_logger(func):
-#     @wraps(func)
-#     def wrapper(*args, **kwargs):
-#         start = time()
-#         result = func(*args, **kwargs)
-#         end = time()
-#         if args and kwargs:
-#             Log.Debug('*** EXECUTED: %s(%s, %s) TIME: %2.2f sec ***' % (func.__name__, args, kwargs, end-start))
-#         elif args:
-#             Log.Debug('*** EXECUTED: %s(%s) TIME: %2.2f sec ***' % (func.__name__, args, end-start))
-#         elif kwargs:
-#             Log.Debug('*** EXECUTED: %s(%s) TIME: %2.2f sec ***' % (func.__name__, kwargs, end-start))
-#         else:
-#             Log.Debug('*** EXECUTED: %s() TIME: %2.2f sec ***' % (func.__name__, end-start))
-#         return result
-#     return wrapper
-#
-#
-# remove duplicates from list of dicts by dict key
-# def remove_duplicates(data, key):
-#     seen_values = set()
-#     without_duplicates = []
-#     for item in data:
-#         value = item[key]
-#         if value not in seen_values:
-#             without_duplicates.append(item)
-#             seen_values.add(value)
-#     return without_duplicates

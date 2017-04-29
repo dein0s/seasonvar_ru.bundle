@@ -1,52 +1,49 @@
 # coding=utf-8
-# DumbTools for Plex v1.1 by Cory <babylonstudio@gmail.com>
 
-# Standard Library
+# Based on DumbTools for Plex v1.1 by Cory <babylonstudio@gmail.com> https://github.com/coryo/DumbTools-for-Plex
+
+# Standart Library
+import sys
 import urllib2
 
+# Bundle Library
+from utils import L
 
-class DumbKeyboardNew(object):
-    clients = ['Plex for iOS', 'Plex Media Player', 'Plex Web', 'Plex for Samsung']
-    layouts = ['ru', 'en']
-    EN_KEYS = list('abcdefghijklmnopqrstuvwxyz')
-    RU_KEYS = list(u'абвгдеёжзийклмнопрстуфхцчшщъыьэюя')
-    NUM_KEYS = list('1234567890')
+
+class DumbKeyboard(object):
+    clients = ['Plex for iOS', 'Plex Media Player', 'Plex Web', 'Plex Home Theater', 'OpenPHT', 'Plex for Roku',
+               'Plex for Samsung']
+
+    LANGUAGE_KEYS = {
+        'ru': list(u'абвгдеёжзийклмнопрстуфхцчшщъыьэюя'),
+        'en': list('abcdefghijklmnopqrstuvwxyz'),
+    }
+    NUM_KEYS = list('0123456789')
     SYM_KEYS = list('-=;[]\\\',./!@#$%^&*()_+:{}|\"<>?')
 
-    # TODO: implement rest
-
-
-
-
-class DumbKeyboard:
-    clients = ['Plex for iOS', 'Plex Media Player', 'Plex Web', 'Plex for Samsung']
-    KEYS = list('abcdefghijklmnopqrstuvwxyz1234567890-=;[]\\\',./')
-    SHIFT_KEYS = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+:{}|\"<>?')
-    NUM_KEYS = list('1234567890')
-
-    def __init__(self, prefix, oc, callback, dktitle=None, dkthumb=None,
-                 dkplaceholder=None, dksecure=False, dknumbersonly=False, **kwargs):
+    def __init__(self, prefix, oc, callback, dktitle=None, dkthumb=None, dkplaceholder=None, dksecure=False,
+                 dklanguage=None, dkletters=True, **kwargs):
         cb_hash = hash(str(callback)+str(kwargs))
-        Route.Connect(prefix+'/dumbkeyboard/%s'%cb_hash, self.Keyboard)
+        Route.Connect(prefix+'/dumbkeyboard/%s'%cb_hash, self.Keyboard, letters=bool, shift=bool)
         Route.Connect(prefix+'/dumbkeyboard/%s/submit'%cb_hash, self.Submit)
         Route.Connect(prefix+'/dumbkeyboard/%s/history'%cb_hash, self.History)
         Route.Connect(prefix+'/dumbkeyboard/%s/history/clear'%cb_hash, self.ClearHistory)
         Route.Connect(prefix+'/dumbkeyboard/%s/history/add/{query}'%cb_hash, self.AddHistory)
-        # Add our directory item
-        oc.add(DirectoryObject(key=Callback(self.Keyboard, query=dkplaceholder),
-                               title=dktitle if dktitle else \
-                                     u'%s'%L('DumbKeyboard Search'),
-                               thumb=dkthumb))
-        # establish our dict entry
+        # Establish our dict entry
         if 'DumbKeyboard-History' not in Dict:
             Dict['DumbKeyboard-History'] = []
             Dict.Save()
         self.Callback = callback
         self.callback_args = kwargs
         self.secure = dksecure
-        self.numbers_only = dknumbersonly
+        # Set keyboard language
+        if dklanguage not in self.LANGUAGE_KEYS:
+            dklanguage = Locale.DefaultLocale if Locale.DefaultLocale in self.LANGUAGE_KEYS else 'en'
+        # Add our directory item
+        oc.add(DirectoryObject(key=Callback(self.Keyboard, query=dkplaceholder, letters=dkletters, language=dklanguage),
+                               title=dktitle if dktitle else L('DUMB_K'), thumb=dkthumb))
 
-    def Keyboard(self, query=None, shift=False):
+    def Keyboard(self, query=None, letters=True, language='en', shift=False):
         if self.secure and query is not None:
             string = ''.join(['*' for i in range(len(query[:-1]))]) + query[-1]
         else:
@@ -55,45 +52,55 @@ class DumbKeyboard:
         oc = ObjectContainer()
         # Submit
         oc.add(DirectoryObject(key=Callback(self.Submit, query=query),
-                               title=u'%s: %s'%(L('Submit'), string.replace(' ', '_'))))
+                               title='%s: %s' % (L('DUMB_K_SUBMIT'), string.replace(' ', '_'))))
         # Search History
         if Dict['DumbKeyboard-History']:
-            oc.add(DirectoryObject(key=Callback(self.History),
-                                   title=u'%s'%L('Search History')))
-        # Space
-        if not self.numbers_only:
-            oc.add(DirectoryObject(key=Callback(self.Keyboard,
-                                                query=query+" " if query else " "),
-                                   title='Space'))
+            oc.add(DirectoryObject(key=Callback(self.History), title=L('DUMB_K_HISTORY')))
+        # Language switch
+        language_index = self.LANGUAGE_KEYS.keys().index(language)
+        if language_index + 1 < len(self.LANGUAGE_KEYS.keys()):
+            next_language_index = language_index + 1
+        else:
+            next_language_index = 0
+        next_language = self.LANGUAGE_KEYS.keys()[next_language_index]
+        lang_title = ' / '.join('(*) ' + k.upper() if k == language else k.upper() for k in self.LANGUAGE_KEYS.keys())
+        oc.add(DirectoryObject(key=Callback(self.Keyboard, query=query, letters=letters, language=next_language),
+                               title=lang_title))
+        # Layout switch (letters/numbers)
+        layout_title = '(*) ABC / ?!123' if letters else 'ABC / (*) ?!123'
+        oc.add(DirectoryObject(key=Callback(self.Keyboard, query=query, letters=not letters, language=language),
+                               title=layout_title))
         # Backspace (not really needed since you can just hit back)
         if query is not None:
-            oc.add(DirectoryObject(key=Callback(self.Keyboard, query=query[:-1]),
-                                   title='Backspace'))
-            oc.add(DirectoryObject(key=Callback(self.Keyboard, query=None), title='Clear'))
+            oc.add(DirectoryObject(key=Callback(self.Keyboard, query=query[:-1], letters=letters, language=language),
+                                   title='[Backspace]'))
+            oc.add(DirectoryObject(key=Callback(self.Keyboard, query=None, letters=letters, language=language),
+                                   title='[Clear]'))
+        # Space
+        oc.add(DirectoryObject(key=Callback(self.Keyboard, query=query+" " if query else " ", letters=letters,
+                                            language=language), title='[Space]'))
         # Shift
-        oc.add(DirectoryObject(key=Callback(self.Keyboard, query=query, shift=True),
-                               title='Shift'))
-        # Keys
-        if self.numbers_only:
-            for key in self.NUM_KEYS:
-                oc.add(DirectoryObject(key=Callback(self.Keyboard,
-                                                    query=query+key if query else key),
-                                       title=u'%s'%key))
+        oc.add(DirectoryObject(key=Callback(self.Keyboard, query=query, letters=letters, language=language,
+                                            shift=not shift), title='[Shift]'))
+        if letters:
+            for key in self.LANGUAGE_KEYS[language]:
+                if shift:
+                    key = key.upper()
+                oc.add(DirectoryObject(key=Callback(self.Keyboard, query=query+key if query else key, letters=letters,
+                                                    language=language), title=key))
         else:
-            for key in self.KEYS if not shift else self.SHIFT_KEYS:
-                oc.add(DirectoryObject(key=Callback(self.Keyboard,
-                                                    query=query+key if query else key),
-                                       title=u'%s'%key))
+            keys = self.SYM_KEYS if shift else self.NUM_KEYS
+            for key in keys:
+                oc.add(DirectoryObject(key=Callback(self.Keyboard, query=query+key if query else key, letters=letters,
+                                                    language=language), title='%s' % key))
         return oc
 
     def History(self):
         oc = ObjectContainer()
         if Dict['DumbKeyboard-History']:
-            oc.add(DirectoryObject(key=Callback(self.ClearHistory),
-                                   title=u'%s'%L('Clear History')))
+            oc.add(DirectoryObject(key=Callback(self.ClearHistory), title=L('DUMB_K_HISTORY_CLEAR')))
         for item in Dict['DumbKeyboard-History']:
-            oc.add(DirectoryObject(key=Callback(self.Submit, query=item),
-                                   title=u'%s'%item))
+            oc.add(DirectoryObject(key=Callback(self.Submit, query=item), title=u'%s' % item))
         return oc
 
     def ClearHistory(self):
@@ -114,8 +121,7 @@ class DumbKeyboard:
 
 
 class DumbPrefs:
-    clients = ['Plex for iOS', 'Plex Media Player', 'Plex Home Theater',
-               'OpenPHT', 'Plex for Roku']
+    clients = ['Plex for iOS', 'Plex Media Player', 'Plex Home Theater', 'OpenPHT', 'Plex for Roku']
 
     def __init__(self, prefix, oc, title=None, thumb=None):
         self.host = 'http://127.0.0.1:32400'
@@ -129,9 +135,7 @@ class DumbPrefs:
         Route.Connect(prefix+'/dumbprefs/listenum', self.ListEnum)
         Route.Connect(prefix+'/dumbprefs/set', self.Set)
         Route.Connect(prefix+'/dumbprefs/settext',  self.SetText)
-        oc.add(DirectoryObject(key=Callback(self.ListPrefs),
-                               title=title if title else L('Preferences'),
-                               thumb=thumb))
+        oc.add(DirectoryObject(key=Callback(self.ListPrefs), title=title if title else L('DUMB_P'), thumb=thumb))
         self.prefix = prefix
         self.GetPrefs()
 
@@ -155,7 +159,8 @@ class DumbPrefs:
                        'type': pref.xpath("@type")[0],
                        'label': pref.xpath("@label")[0],
                        'default': pref.xpath("@default")[0],
-                       'secure': True if pref.xpath("@secure")[0] == "true" else False,
+                    #    'secure': True if pref.xpath("@secure")[0] == "true" else False,
+                       'secure': True if (pref.xpath("@option") and pref.xpath("@option")[0] == "hidden") else False,
                        'values': pref.xpath("@values")[0].split("|") \
                                  if pref.xpath("@values") else None
                       } for pref in prefs]
