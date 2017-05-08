@@ -233,7 +233,7 @@ def GetTranslatesFolder(show_name, season_id, check_updates):
     oc = ObjectContainer(title2=season['title'], content=ContainerContent.Seasons)
     for trans_index, translate in enumerate(season['playlist'].keys()):
         fake_url = make_fake_url(show_name=show_name, season_id=season_id, translate=translate)
-        title = translate
+        title = L(translate)
         if check_updates:
             updates_cache = cache.get_updates_cache()
             if season_id in updates_cache:
@@ -245,7 +245,7 @@ def GetTranslatesFolder(show_name, season_id, check_updates):
                 else:
                     ep_names = [ep['name'] for ep in season['playlist'][translate]]
                     if True in [ep_name in update_messages for ep_name in ep_names]:
-                        title = '(*) ' + translate
+                        title = '(*) ' + title
         if bookmarks.is_marked(season_id):
             last_watched = bookmarks.get_mark(season_id)['last_watched']
             translate_episodes = [ep['episode_id'] for ep in season['playlist'][translate]]
@@ -253,14 +253,14 @@ def GetTranslatesFolder(show_name, season_id, check_updates):
                 title = '(!) ' + title
         oc.add(SeasonObject(key=Callback(GetEpisodesFolder, show_name=show_name, season_id=season_id,
                                          translate=translate), rating_key=fake_url, index=trans_index + 1,
-                            title=L(title), source_title=TITLE, thumb=season['thumb'], summary=season['summary']))
+                            title=title, source_title=TITLE, thumb=season['thumb'], summary=season['summary']))
     return oc
 
 
 @route(PREFIX + '/season/{season_id}/translates/{translate}')
 def GetEpisodesFolder(show_name, season_id, translate):
     season = cache.get_season_cache_or_create(show_name, season_id)
-    oc = ObjectContainer(title2=translate, content=ContainerContent.Episodes)
+    oc = ObjectContainer(title2=L(translate), content=ContainerContent.Episodes)
     for episode in season['playlist'][translate]:
         fake_url = make_fake_url(show_name=show_name, season_id=season_id, translate=translate,
                                  episode_id=episode['episode_id'])
