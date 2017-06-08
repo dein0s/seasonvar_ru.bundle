@@ -161,6 +161,7 @@ def get_season_playlist(page_html):
             link = String.Unquote(link.encode('utf-8'), usePlus=True).decode('utf-8')
             link_data = get_request(link, cache=SEASON_PAGE_CACHE_TIME)
         playlist = JSON.ObjectFromString(link_data.content)['playlist']
+        additional_id = len(playlist) + 100
         for episode in playlist:
             translate = Re.EPISODE_COMMENT_TRANSLATE.search(episode['comment']).group(1)
             if translate == '':
@@ -172,11 +173,17 @@ def get_season_playlist(page_html):
                     name = episode['comment'][:episode['comment'].find(' SD')]
                 else:
                     name = Re.EPISODE_COMMENT_NAME.search(episode['comment']).group(1)
+                get_episode_id = Re.EPISODE_COMMENT_ID.search(episode['comment'])
+                if get_episode_id:
+                    episode_id = get_episode_id.group(1)
+                else:
+                    episode_id = str(additional_id)
+                    additional_id = additional_id + 1
                 fmt_episode = {
                     'link': episode['file'],
                     'name': name,
                     'perevod': translate,
-                    'episode_id': Re.EPISODE_COMMENT_ID.search(episode['comment']).group(1)
+                    'episode_id': episode_id
                 }
                 result[translate].append(fmt_episode)
     return result

@@ -90,8 +90,14 @@ def format_api_season_data(data):
     if 'other_season' in data:
         result['other_season'] = data['other_season']
     if 'playlist' in data:
+        additional_id = len(data['playlist']) + 100
         for episode in data['playlist']:
-            episode_id = Regex(EPISODE_ID_PATTERN).search(episode['name'])
+            get_episode_id = Regex(EPISODE_ID_PATTERN).search(episode['name'])
+            if get_episode_id:
+                episode['episode_id'] = get_episode_id.group(1)
+            else:
+                episode['episode_id'] = str(additional_id)
+                additional_id = additional_id + 1
             episode['episode_id'] = episode_id.group(1) if episode_id else episode['name']
             if 'perevod' not in episode:
                 if 'TRANSLATE_DEFAULT' in result['playlist']:
