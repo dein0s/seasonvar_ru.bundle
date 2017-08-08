@@ -160,10 +160,13 @@ def get_season_playlist(page_html):
         else:
             link = String.Unquote(link.encode('utf-8'), usePlus=True).decode('utf-8')
             link_data = get_request(link, cache=SEASON_PAGE_CACHE_TIME)
+        if True in [unsupported_translate in link for unsupported_translate in cnst.UNSUPPORTED_TRANSLATES]:
+            continue
         playlist = JSON.ObjectFromString(link_data.content)['playlist']
         additional_id = len(playlist) + 100
         for episode in playlist:
-            translate = Re.EPISODE_COMMENT_TRANSLATE.search(episode['comment']).group(1)
+            get_translate = Re.EPISODE_COMMENT_TRANSLATE.search(episode['comment'])
+            translate = get_translate.group(1) if get_translate else ''
             if translate == '':
                 translate = u'TRANSLATE_DEFAULT'
             if translate not in cnst.UNSUPPORTED_TRANSLATES:
