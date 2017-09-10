@@ -134,7 +134,9 @@ def get_season_data_by_link(url):
             for item in season_list:
                 item_title_text = item.text_content().strip()
                 item_season_id = Re.SEASON_URL_ID.search(item.get('href')).group(1)
-                item_season_number = Re.SEASON_TITLE_NUMBER.search(item_title_text).group(1)
+                # TODO: cleanup this mess (season_id=9722 missing season number)
+                get_item_season_number = Re.SEASON_TITLE_NUMBER.search(item_title_text)
+                item_season_number = get_item_season_number.group(1) if get_item_season_number else 0
                 if item_season_id != season_id:
                     other_season[item_season_number] = item_season_id
             result['other_season'] = other_season
@@ -150,10 +152,15 @@ def get_season_playlist(page_html):
     get_legal_player = page_html.find('.' + cnst.XP_SeasonP.LEGAL_PLAYER)
     get_block_player = page_html.find('.' + cnst.XP_SeasonP.BLOCK_PLAYER)
     season_id = page_html.find('.' + cnst.XP_SeasonP.MAIN).get('data-id-season')
-    if get_legal_player or get_block_player:
-        playlist_links = get_playlist_from_alt_player(season_id)
-    else:
-        playlist_links = get_playlist_from_player(page_html)
+    # NB: legal doesn't matter anymore
+    # TODO: remove this block if everything will be fine
+    # -----REMOVE-----
+    # if get_legal_player or get_block_player:  # TODO: block cannot be displayed anymore, need some cleanup
+    #     playlist_links = get_playlist_from_alt_player(season_id)
+    # else:
+    #     playlist_links = get_playlist_from_player(page_html)
+    # -----REMOVE-----
+    playlist_links = get_playlist_from_player(page_html)
     for link in playlist_links:
         if cnst.URL_DATALOCK.MAIN in link:
             link_data = HTTP.Request(link, cacheTime=SEASON_PAGE_CACHE_TIME)
@@ -199,15 +206,24 @@ def get_playlist_from_player(page_html):
     """
     # NB: xpath() because find() and findall() doesn't support entire XPath
     # ref. to http://lxml.de/FAQ.html#what-are-the-findall-and-xpath-methods-on-element-tree
-    get_player = page_html.xpath('.' + cnst.XP_SeasonP.PLAYER + cnst.XP.SCRIPT + cnst.XP.WITH_TEXT % 'data4play')[0]
-    get_player_text = get_player.text_content()
+    # TODO: remove this block if everything will be fine
+    # -----REMOVE-----
+    # get_player = page_html.xpath('.' + cnst.XP_SeasonP.PLAYER + cnst.XP.SCRIPT + cnst.XP.WITH_TEXT % 'data4play')[0]
+    # get_player_text = get_player.text_content()
+    # season_id = page_html.find('.' + cnst.XP_SeasonP.MAIN).get('data-id-season')
+    # player_secure_mark = Re.SEASON_PLAYER_SECURE_MARK.search(get_player_text).group(1)
+    # player_time = Re.SEASON_PLAYER_TIME.search(get_player_text).group(1)
+    # player_data = {
+    #     'id': season_id,
+    #     'secure': player_secure_mark,
+    #     'time': player_time,
+    #     'type': 'html5',
+    # }
+    # -----REMOVE-----
     season_id = page_html.find('.' + cnst.XP_SeasonP.MAIN).get('data-id-season')
-    player_secure_mark = Re.SEASON_PLAYER_SECURE_MARK.search(get_player_text).group(1)
-    player_time = Re.SEASON_PLAYER_TIME.search(get_player_text).group(1)
     player_data = {
         'id': season_id,
-        'secure': player_secure_mark,
-        'time': player_time,
+        'secure': get_secure_token(),
         'type': 'html5',
     }
     headers = {'X-Requested-With': 'XMLHttpRequest'}
@@ -216,6 +232,12 @@ def get_playlist_from_player(page_html):
     default_playlist = Re.PLAYER_DEFAULT_PLAYLIST.search(player_page.content).group(1)
     playlist_links.append(default_playlist)
     return playlist_links
+
+
+def get_secure_token():
+    # NB: this is `temporary` token :D until they fix it
+    # TODO: implement actual retrieving token if they fix their security issues :D
+    return 'fake'
 
 
 def get_playlist_from_alt_player(season_id):
