@@ -268,7 +268,7 @@ def get_search_results(query):
     for index, item in enumerate(response_json['data']):
         if 'serial-' in item:
             season_id = response_json['id'][index]
-            suggestion = response_json['suggestions'][index]
+            suggestion = response_json['suggestions']['valu'][index]
             get_name = Re.SEARCH_SUGGESTION_NAME.search(suggestion) or Re.SEARCH_SUGGESTION_NAME_ALT.search(suggestion)
             if get_name:
                 name = get_name.group(1)
