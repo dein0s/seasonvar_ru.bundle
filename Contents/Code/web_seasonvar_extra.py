@@ -27,8 +27,12 @@ def login():
             if get_cookies:
                 cookies = {}
                 if isinstance(get_cookies, str):
-                    k, v = get_cookies.split('=')
-                    cookies[k] = v
+                    # split string of cookies into list
+                    all_cookies = get_cookies.split("; ")
+                    # get cookie key=val
+                    for cookie in all_cookies:
+                        k, v = cookie.split('=')
+                        cookies[k] = v
             # NB: know why? because FUCK YOU! that's why... FrameworkException: Operator '-=' is not supported
             login_retries = login_retries - 1
             continue
