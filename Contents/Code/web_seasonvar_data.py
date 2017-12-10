@@ -152,14 +152,6 @@ def get_season_playlist(page_html):
     get_legal_player = page_html.find('.' + cnst.XP_SeasonP.LEGAL_PLAYER)
     get_block_player = page_html.find('.' + cnst.XP_SeasonP.BLOCK_PLAYER)
     season_id = page_html.find('.' + cnst.XP_SeasonP.MAIN).get('data-id-season')
-    # NB: legal doesn't matter anymore
-    # TODO: remove this block if everything will be fine
-    # -----REMOVE-----
-    # if get_legal_player or get_block_player:  # TODO: block cannot be displayed anymore, need some cleanup
-    #     playlist_links = get_playlist_from_alt_player(season_id)
-    # else:
-    #     playlist_links = get_playlist_from_player(page_html)
-    # -----REMOVE-----
     playlist_links = get_playlist_from_player(page_html)
     for link in playlist_links:
         if cnst.URL_DATALOCK.MAIN in link:
@@ -169,21 +161,21 @@ def get_season_playlist(page_html):
             link_data = get_request(link, cache=SEASON_PAGE_CACHE_TIME)
         if True in [unsupported_translate in link for unsupported_translate in cnst.UNSUPPORTED_TRANSLATES]:
             continue
-        playlist = JSON.ObjectFromString(link_data.content)['playlist']
+        playlist = JSON.ObjectFromString(link_data.content)
         additional_id = len(playlist) + 100
         for episode in playlist:
-            get_translate = Re.EPISODE_COMMENT_TRANSLATE.search(episode['comment'])
+            get_translate = Re.EPISODE_COMMENT_TRANSLATE.search(episode['title'])
             translate = get_translate.group(1) if get_translate else ''
             if translate == '':
                 translate = u'TRANSLATE_DEFAULT'
             if translate not in cnst.UNSUPPORTED_TRANSLATES:
                 if translate not in result:
                     result[translate] = []
-                if ' SD' in episode['comment']:
-                    name = episode['comment'][:episode['comment'].find(' SD')]
+                if ' SD' in episode['title']:
+                    name = episode['title'][:episode['title'].find(' SD')]
                 else:
-                    name = Re.EPISODE_COMMENT_NAME.search(episode['comment']).group(1)
-                get_episode_id = Re.EPISODE_COMMENT_ID.search(episode['comment'])
+                    name = Re.EPISODE_COMMENT_NAME.search(episode['title']).group(1)
+                get_episode_id = Re.EPISODE_COMMENT_ID.search(episode['title'])
                 if get_episode_id:
                     episode_id = get_episode_id.group(1)
                 else:
